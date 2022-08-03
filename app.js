@@ -5,7 +5,9 @@ const json = require('koa-json')
 const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
+const cors = require('koa2-cors')
 const wsClient = require('./ws')
+const router = require('koa-router')()
 
 const index = require('./routes/index')
 const users = require('./routes/users')
@@ -13,6 +15,22 @@ const users = require('./routes/users')
 // error handler
 onerror(app)
 
+app.use(cors({
+  origin: function(ctx) {
+    return '*'
+  },
+  exposeHeaders: ['WWW-Authenticate', 'Server-Authorization'],
+  maxAge: 5,
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Accept']
+}))
+app.use(async (ctx, next) => {
+  // ctx.set("Access-Control-Allow-Origin", "*");
+  // ctx.set("Access-Control-Allow-Methods", "OPTION, OPTIONS, GET, PUT, POST, DELETE");
+  // ctx.set("Access-Control-Allow-Headers", "x-requested-with, accept, origin, content-type");
+  await next();
+})
 // middlewares
 app.use(bodyparser({
   enableTypes:['json', 'form', 'text']
