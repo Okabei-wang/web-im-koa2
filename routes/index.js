@@ -3,7 +3,8 @@ const Captcha = require('../util/captcha')
 const Db = require('../async-db/db')
 const crypto = require("crypto");
 const json = require('koa-json')
-const { jwtSign, jwtCheck } = require('../util/jwt')
+const { jwtSign, jwtGetInfo, getObjectId } = require('../util/jwt')
+const ObjectId = require('mongodb').ObjectId
 
 router.get('/', async (ctx, next) => {
   await ctx.render('index', {
@@ -17,7 +18,7 @@ router.get('/string', async (ctx, next) => {
 
 router.get('/login/image_code', async (ctx, next) => {
   ctx.response.status = 200;
-  ctx.set('Content-Type', 'application/json');
+  // ctx.set('Content-Type', 'application/json');
   const image_code = new Captcha().getCode();
   ctx.body = {
     code: 0,
@@ -26,9 +27,31 @@ router.get('/login/image_code', async (ctx, next) => {
   }
 })
 
+router.get('/user/info', async (ctx, next) => {
+  try{
+    ctx.response.status = 200;
+    ctx.set('Content-Type', 'application/json');
+    const token = ctx.request.header.authorization.split(' ')[1]
+    const info = jwtGetInfo(token)
+    const userId = info.id
+    const dbres = await Db.find('user', { _id: ObjectId(userId) })
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]
+    }
+  } catch(e) {
+    tx.body = {
+      code: 999,
+      message: 'ok',
+      data: JSON.stringify(e)
+    }
+  }
+})
+
 router.post('/user/login', async (ctx, next) => {
   const data = ctx.request.body
-  const dbres = await Db.find('user', { username: data.username })
+  const dbres = await Db.find('user', { loginname: data.username })
   if(dbres.length) {
     // 找到此用户
     const dbuser = dbres[0]
@@ -77,13 +100,46 @@ router.post('/login/register', async (ctx, next) => {
       role: 'user'
     }
     const res = await Db.insert('user', data)
-    console.log('dbres', res)
     ctx.body = {
       code: 0,
       message: 'ok',
       data: null
     }
   }
+})
+
+router.post('/room/create', async (ctx, next) => {
+  const data = ctx.request.body
+  const insertJson = {
+    roomname: data.roomname,
+    admin: data.admin,
+    memberlist: [data.admin]
+  }
+  try {
+    const dbres = await Db.insert('room', insertJson)
+    if(dbres.acknowledged) {
+      // 成功
+      ctx.body = {
+        code: 0,
+        message: 'ok',
+        data: dbres.insertedId
+      }
+    } else {
+      // 失败
+      ctx.body = {
+        code: 999,
+        message: 'error',
+        data: null
+      }
+    }
+  } catch(e) {
+    ctx.body = {
+      code: 999,
+      message: '新建失败，请联系管理员',
+      data: JSON.stringify(e)
+    }
+  }
+  
 })
 
 module.exports = router

@@ -9,24 +9,40 @@ const jwtSign = (data) => {
   return token
 }
 
+const  avoidVerifyUrl = ['/user/login', '/login/register', '/login/image_code']
+
 // token验证函数(jwtCheck)
-const jwtCheck = (req, res, next) => { 
-  //前端headers传来的token值:
-  const token = req.headers.token
-  jwt.verify(token, jwtKey, (err, data) => {
-    if (err) {
-      res.send({
-        status: '401',
-        msg: 'token无效'
-      })
-    } else {
-      req.jwtInfo = data
-      next()
+const jwtGetInfo = (token) => {
+  try{
+    return jwt.verify(token, jwtKey)
+  } catch(e) {
+    console.log(e)
+    return false
+  }
+}
+
+const jwtCheck = async (ctx, next) => {
+  let url =ctx.request.url;
+  if(avoidVerifyUrl.includes(url)) {
+    await next()
+  } else {
+    //拿到token
+    const authorization = ctx.get('Authorization').split(' ')[1];
+    if (authorization === '') {
+      ctx.throw(401, 'no token detected in http headerAuthorization');
     }
-  })
+    let tokenContent;
+    try {
+      tokenContent = await jwt.verify(authorization, 'Okabei');//如果token过期或验证失败，将抛出错误
+    } catch (err) {
+      ctx.throw(401, 'invalid token');
+    }
+    await next();
+  }
 }
 
 module.exports = {
   jwtSign,
-  jwtCheck
+  jwtCheck,
+  jwtGetInfo
 }

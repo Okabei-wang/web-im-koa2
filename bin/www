@@ -22,12 +22,44 @@ var port = normalizePort(process.env.PORT || '3000');
 var server = http.createServer(app.callback());
 
 /**
+ * socket.io通信，transports这里需要加上websocket，否则会跨域
+ */
+
+var io = require('socket.io')(server, { transports: ['websocket'] });
+
+/**
  * Listen on provided port, on all network interfaces.
  */
 
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+// 客户端发起连接时触发
+io.on('connection', (socket) => {
+  console.log('a user connected', socket);
+  socket.on('sendMsg', (data) => {
+    console.log(data)
+    setMessage(data)
+  })
+}) 
+
+function setMessage(data) {
+  switch (data) {
+    case 0:
+      // 开始链接ws
+      break;
+    case 1:
+      // 人对人私聊message
+      break;
+    case 2:
+      // 房间message
+      break;
+    case 3:
+      // ws断开
+      break;
+  }
+}
 
 /**
  * Normalize a port into a number, string, or false.

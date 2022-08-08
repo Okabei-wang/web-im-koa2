@@ -6,11 +6,12 @@ const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
 const cors = require('koa2-cors')
-const wsClient = require('./ws')
+// const wsClient = require('./ws')
 const router = require('koa-router')()
 
 const index = require('./routes/index')
 const users = require('./routes/users')
+const { jwtCheck } = require('./util/jwt')
 
 // error handler
 onerror(app)
@@ -25,10 +26,9 @@ app.use(cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'Accept']
 }))
+app.use(jwtCheck)
 app.use(async (ctx, next) => {
-  // ctx.set("Access-Control-Allow-Origin", "*");
-  // ctx.set("Access-Control-Allow-Methods", "OPTION, OPTIONS, GET, PUT, POST, DELETE");
-  // ctx.set("Access-Control-Allow-Headers", "x-requested-with, accept, origin, content-type");
+  ctx.set('Content-Type', 'application/json')
   await next();
 })
 // middlewares
@@ -60,6 +60,6 @@ app.on('error', (err, ctx) => {
   console.error('server error', err, ctx)
 });
 
-wsClient()
+// wsClient()
 
 module.exports = app
