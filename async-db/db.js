@@ -82,7 +82,7 @@ class Db {
     return new Promise((resolve, reject) => {
       this.connect().then((db) => {
         db.collection(collectionName)
-        .updateOne(json, function(err, data) {
+        .deleteMany(json, function(err, data) {
           if(err) {
             reject(err)
             return;

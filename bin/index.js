@@ -34,15 +34,42 @@
  server.listen(port);
  server.on('error', onError);
  server.on('listening', onListening);
+
+ var heartList = {}
  
   // 客户端发起连接时触发
   io.on('connection', (socket) => {
-    console.log('a user connected', socket);
+    // console.log('a user connected', socket);
     socket.on('sendMsg', (data) => {
-      console.log(data)
       setMessage(data)
+      heartList[`${data.userId}`].heartTime = 0
+      heartList[`${data.userId}`].heartTimer = null
     })
-  }) 
+    socket.on('heartbeat', (data) => {
+      initHeartIntervial(data)
+    })
+  })
+
+  function initHeartIntervial(data) {
+    // 初始化心跳检测
+    clearInterval(heartList[`${data.userId}`].heartTimer)
+    heartList[`${data.userId}`].heartTime = 0
+    heartList[`${data.userId}`].heartTimer = setInterval(() => {
+      heartList[`${data.userId}`].heartTime++
+      if (heartList[`${data.userId}`].heartTime > 1800) {
+        // 超过30分钟没有收到心跳，则断开连接
+        console.log('heartbeat timeout')
+        io.emit('connectionClose', {})
+        setMessage({ type: 3, time: new Date(), message: `${data.username} 链接 websocket`, userId: data.userId })
+        clearUserConnectInfo(data.userId)
+      }
+    }, 1000)
+  }
+
+  async function clearUserConnectInfo(userId) {
+    await Db.remove('user', { userId: userId, type: 0 })
+    await Db.remove('user', { userId: userId, type: 3 })
+  }
  
   async function setMessage(data) {
     switch (data.type) {
@@ -60,6 +87,7 @@
         break;
       case 3:
         // ws断开
+        await Db.insert('message', data)
         break;
     }
  }

@@ -49,6 +49,24 @@ router.get('/user/info', async (ctx, next) => {
   }
 })
 
+router.post('/friend/list', async (ctx, next) => {
+  const data = ctx.request.body
+  const dataList = []
+  for(let i in data) {
+    const friendId = data[i]
+    console.log(friendId)
+    const dbres = await Db.find('user', { _id: ObjectId(friendId) })
+    if(dbres.length) {
+      dataList.push(dbres[0])
+    }
+  }
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: dataList
+  }
+})
+
 router.post('/user/login', async (ctx, next) => {
   const data = ctx.request.body
   const dbres = await Db.find('user', { loginname: data.username })
@@ -113,7 +131,8 @@ router.post('/room/create', async (ctx, next) => {
   const insertJson = {
     roomname: data.roomname,
     admin: data.admin,
-    memberlist: [data.admin]
+    memberlist: [data.admin],
+    roomId: new Date().getTime().toString()
   }
   try {
     const dbres = await Db.insert('room', insertJson)
@@ -135,11 +154,21 @@ router.post('/room/create', async (ctx, next) => {
   } catch(e) {
     ctx.body = {
       code: 999,
-      message: '新建失败，请联系管理员',
+      message: '创建失败，请联系管理员',
       data: JSON.stringify(e)
     }
   }
-  
+})
+
+router.post('/room/history', async (ctx, next) => {
+  // 获取房间历史
+  const data = ctx.request.body
+  const dbres = await Db.find('message', { roomId: data.roomId })
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: dbres
+  }
 })
 
 module.exports = router
