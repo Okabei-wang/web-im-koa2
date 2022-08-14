@@ -136,6 +136,11 @@ router.post('/room/create', async (ctx, next) => {
   }
   try {
     const dbres = await Db.insert('room', insertJson)
+    const userRes = await Db.find('user', { _id: ObjectId(data.admin) })
+    const user = userRes[0]
+    console.log(dbres)
+    user.roomlist.push(dbres.insertedId)
+    await Db.update('user', { _id: ObjectId(data.admin) }, { roomlist: user.roomlist })
     if(dbres.acknowledged) {
       // 成功
       ctx.body = {
@@ -152,6 +157,7 @@ router.post('/room/create', async (ctx, next) => {
       }
     }
   } catch(e) {
+    console.log(e)
     ctx.body = {
       code: 999,
       message: '创建失败，请联系管理员',

@@ -67,7 +67,7 @@ class Db {
     return new Promise((resolve, reject) => {
       this.connect().then(db => {
         db.collection(collectionName)
-        .updateOne(JSON1, {$set:JSON2},function(err,data){
+        .updateOne(json1, {$set:json2},function(err,data){
           if(err){
             reject(err)
             return;

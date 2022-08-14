@@ -42,29 +42,32 @@
     // console.log('a user connected', socket);
     socket.on('sendMsg', (data) => {
       setMessage(data)
-      heartList[`${data.userId}`].heartTime = 0
-      heartList[`${data.userId}`].heartTimer = null
+      // heartList[`${data.userId}`].heartTime = 0
+      // heartList[`${data.userId}`].heartTimer = null
     })
-    socket.on('heartbeat', (data) => {
-      initHeartIntervial(data)
+    socket.on('disconnect', () => {
+      console.log('链接中断')
     })
+    // socket.on('heartbeat', (data) => {
+    //   initHeartIntervial(data)
+    // })
   })
 
-  function initHeartIntervial(data) {
-    // 初始化心跳检测
-    clearInterval(heartList[`${data.userId}`].heartTimer)
-    heartList[`${data.userId}`].heartTime = 0
-    heartList[`${data.userId}`].heartTimer = setInterval(() => {
-      heartList[`${data.userId}`].heartTime++
-      if (heartList[`${data.userId}`].heartTime > 1800) {
-        // 超过30分钟没有收到心跳，则断开连接
-        console.log('heartbeat timeout')
-        io.emit('connectionClose', {})
-        setMessage({ type: 3, time: new Date(), message: `${data.username} 链接 websocket`, userId: data.userId })
-        clearUserConnectInfo(data.userId)
-      }
-    }, 1000)
-  }
+  // function initHeartIntervial(data) {
+  //   // 初始化心跳检测
+  //   clearInterval(heartList[`${data.userId}`].heartTimer)
+  //   heartList[`${data.userId}`].heartTime = 0
+  //   heartList[`${data.userId}`].heartTimer = setInterval(() => {
+  //     heartList[`${data.userId}`].heartTime++
+  //     if (heartList[`${data.userId}`].heartTime > 1800) {
+  //       // 超过30分钟没有收到心跳，则断开连接
+  //       console.log('heartbeat timeout')
+  //       io.emit('connectionClose', {})
+  //       setMessage({ type: 3, time: new Date(), message: `${data.username} 链接 websocket`, userId: data.userId })
+  //       clearUserConnectInfo(data.userId)
+  //     }
+  //   }, 1000)
+  // }
 
   async function clearUserConnectInfo(userId) {
     await Db.remove('user', { userId: userId, type: 0 })
@@ -90,7 +93,7 @@
         await Db.insert('message', data)
         break;
     }
- }
+  }
  
  /**
   * Normalize a port into a number, string, or false.
