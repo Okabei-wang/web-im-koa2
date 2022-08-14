@@ -115,7 +115,10 @@ router.post('/login/register', async (ctx, next) => {
       username: ctx.request.body.username,
       loginname: ctx.request.body.username,
       password: newPwd,
-      role: 'user'
+      role: 'user',
+      avatar: '',
+      friends: [],
+      roomlist: []
     }
     const res = await Db.insert('user', data)
     ctx.body = {
