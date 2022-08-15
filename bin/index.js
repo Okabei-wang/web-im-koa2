@@ -48,9 +48,6 @@
     socket.on('disconnect', () => {
       console.log('链接中断')
     })
-    // socket.on('heartbeat', (data) => {
-    //   initHeartIntervial(data)
-    // })
   })
 
   // function initHeartIntervial(data) {
