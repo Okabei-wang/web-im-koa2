@@ -168,6 +168,36 @@ router.post('/room/create', async (ctx, next) => {
   }
 })
 
+router.post('/room/info', async (ctx, next) => {
+  // 获取room详情
+  const data = ctx.request.body
+  const dbres = await Db.find('room', { _id: ObjectId(data.roomId) })
+  if(dbres.length) {
+    // 成功
+    if(dbres[0].memberlist.length) {
+      const memberlist = []
+      for(let i in dbres[0].memberlist) {
+        const userRes = await Db.find('user', { _id: ObjectId(dbres[0].memberlist[i]) })
+        if(userRes.length) {
+          memberlist.push(userRes[0])
+        }
+      }
+      dbres[0].memberlist = memberlist
+    }
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]
+    }
+  } else {
+    ctx.body = {
+      code: 1,
+      message: '房间不存在',
+      data: null
+    }
+  }
+})
+
 router.post('/room/history', async (ctx, next) => {
   // 获取房间历史
   const data = ctx.request.body
