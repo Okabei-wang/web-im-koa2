@@ -209,4 +209,15 @@ router.post('/room/history', async (ctx, next) => {
   }
 })
 
+router.post('/friend/history', async (ctx, next) => {
+  // 获取私聊历史
+  const data = ctx.request.body
+  const dbres = await Db.find('message', { roomId: data.friendId })
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: dbres
+  }
+})
+
 module.exports = router
