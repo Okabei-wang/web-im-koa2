@@ -216,7 +216,7 @@ router.post('/room/list', async (ctx, next) => {
     ctx.body = {
       code: 0,
       message: 'ok',
-      data: dbres[0]
+      data: resData
     }
   } catch(e) {
     ctx.body = {
