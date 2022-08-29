@@ -198,6 +198,35 @@ router.post('/room/info', async (ctx, next) => {
   }
 })
 
+router.post('/room/list', async (ctx, next) => {
+  // 获取room详情
+  const data = ctx.request.body
+  const roomIdList = data.roomIdList
+  let resData = []
+  try {
+    for(const i in roomIdList) {
+      const dbres = await Db.find('room', { _id: ObjectId(roomIdList[i]) })
+      if(dbres.length) {
+        // 成功
+        resData.push(dbres[0])
+      } else {
+        throw new Error('房间不存在')
+      }
+    }
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]
+    }
+  } catch(e) {
+    ctx.body = {
+      code: 1,
+      message: e,
+      data: null
+    }
+  }
+})
+
 router.post('/room/history', async (ctx, next) => {
   // 获取房间历史
   const data = ctx.request.body
