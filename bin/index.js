@@ -7,6 +7,7 @@
  var debug = require('debug')('demo:server');
  var http = require('http');
  var Db = require('../async-db/db')
+ const ObjectId = require('mongodb').ObjectId
  
  /**
   * Get port from environment and store in Express.
@@ -49,9 +50,12 @@
         console.log(user.username, "登录了系统");
       }
     })
-    socket.on('sendMsg', (data) => {
+    socket.on('sendMsg', async (data) => {
       setMessage(data)
       // 向所有client发送data
+      const dbres = await Db.find('user', { _id: ObjectId(data.sendUserId) })
+      data.userInfo = dbres[0]
+      console.log(data)
       io.emit('message', data)
     })
     socket.on('disconnect', () => {

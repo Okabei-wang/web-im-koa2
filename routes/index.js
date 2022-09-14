@@ -227,17 +227,6 @@ router.post('/room/list', async (ctx, next) => {
   }
 })
 
-router.post('/room/history', async (ctx, next) => {
-  // 获取房间历史
-  const data = ctx.request.body
-  const dbres = await Db.find('message', { roomId: data.roomId })
-  ctx.body = {
-    code: 0,
-    message: 'ok',
-    data: dbres
-  }
-})
-
 router.post('/friend/history', async (ctx, next) => {
   // 获取私聊历史
   const data = ctx.request.body
@@ -247,6 +236,55 @@ router.post('/friend/history', async (ctx, next) => {
     message: 'ok',
     data: dbres
   }
+})
+
+router.post('/room/history', async (ctx, next) => {
+  // 获取房间历史
+  const data = ctx.request.body
+  const dbres = await Db.find('message', { receiveId: data.roomId })
+  let resData = []
+  if(dbres.length) {
+    for(const i in dbres) {
+      const user_dbres = await Db.find('user', { _id: ObjectId(dbres[i].sendUserId) })
+      if(!user_dbres) {
+        throw new Error('用户不存在')
+      }
+      dbres[i].userInfo = user_dbres[0]
+    }
+  }
+  resData = dbres
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: resData
+  }
+})
+
+router.post('/entry/room', async (ctx, next) => {
+  // 获取私聊历史
+  const data = ctx.request.body
+  try {
+    const dbres = await Db.find('room', { roomId: data.roomId })
+    const token = ctx.request.header.authorization.split(' ')[1]
+    const info = jwtGetInfo(token)
+    const userId = info.id
+    if (dbres[0].memberlist.indexOf(userId) < 0) {
+      dbres[0].memberlist.push(userId)
+      await Db.update('room', { roomId: data.roomId }, { memberlist: dbres[0].memberlist })
+    }
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]._id
+    }
+  } catch(e) {
+    ctx.body = {
+      code: 1,
+      message: '未找到，请确认是否存在该房间',
+      data: null
+    }
+  }
+  
 })
 
 module.exports = router
