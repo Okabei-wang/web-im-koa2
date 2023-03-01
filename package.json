@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node bin/index",
     "dev": "./node_modules/.bin/nodemon bin/index",
-    "prd": "pm2 start bin/www",
+    "prd": "pm2 start bin/index",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

@@ -3,7 +3,7 @@ const Captcha = require('../util/captcha')
 const Db = require('../async-db/db')
 const crypto = require("crypto");
 const json = require('koa-json')
-const { jwtSign, jwtGetInfo, getObjectId } = require('../util/jwt')
+const { jwtSign, jwtGetInfo } = require('../util/jwt')
 const ObjectId = require('mongodb').ObjectId
 
 router.get('/', async (ctx, next) => {
@@ -28,6 +28,28 @@ router.get('/login/image_code', async (ctx, next) => {
 })
 
 router.get('/user/info', async (ctx, next) => {
+  try{
+    ctx.response.status = 200;
+    ctx.set('Content-Type', 'application/json');
+    const token = ctx.request.header.authorization.split(' ')[1]
+    const info = jwtGetInfo(token)
+    const userId = info.id
+    const dbres = await Db.find('user', { _id: ObjectId(userId) })
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]
+    }
+  } catch(e) {
+    tx.body = {
+      code: 999,
+      message: 'ok',
+      data: JSON.stringify(e)
+    }
+  }
+})
+
+router.get('/user/message/list', async (ctx, next) => {
   try{
     ctx.response.status = 200;
     ctx.set('Content-Type', 'application/json');
@@ -198,6 +220,26 @@ router.post('/room/info', async (ctx, next) => {
   }
 })
 
+router.post('/friend/info', async (ctx, next) => {
+  // 获取好友详情
+  const data = ctx.request.body
+  const dbres = await Db.find('user', { _id: ObjectId(data.friendId) })
+  if(dbres.length) {
+    // 成功
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: dbres[0]
+    }
+  } else {
+    ctx.body = {
+      code: 1,
+      message: '房间不存在',
+      data: null
+    }
+  }
+})
+
 router.post('/room/list', async (ctx, next) => {
   // 获取room详情
   const data = ctx.request.body
@@ -227,16 +269,27 @@ router.post('/room/list', async (ctx, next) => {
   }
 })
 
-router.post('/friend/history', async (ctx, next) => {
-  // 获取私聊历史
-  const data = ctx.request.body
-  const dbres = await Db.find('message', { roomId: data.friendId })
-  ctx.body = {
-    code: 0,
-    message: 'ok',
-    data: dbres
-  }
-})
+// router.post('/friend/history', async (ctx, next) => {
+//   // 获取私聊历史
+//   const data = ctx.request.body
+//   const dbres = await Db.find('message', { roomId: data.friendId })
+//   let resData = []
+//   if(dbres.length) {
+//     for(const i in dbres) {
+//       const user_dbres = await Db.find('user', { _id: ObjectId(dbres[i].sendUserId) })
+//       if(!user_dbres) {
+//         throw new Error('用户不存在')
+//       }
+//       dbres[i].userInfo = user_dbres[0]
+//     }
+//   }
+//   resData = dbres
+//   ctx.body = {
+//     code: 0,
+//     message: 'ok',
+//     data: resData
+//   }
+// })
 
 router.post('/room/history', async (ctx, next) => {
   // 获取房间历史
@@ -260,17 +313,48 @@ router.post('/room/history', async (ctx, next) => {
   }
 })
 
+router.post('/friend/history', async (ctx, next) => {
+  // 获取好友私聊历史
+  const data = ctx.request.body
+  const dbres = await Db.find('message', { sendUserId: { $in: [data.friendId, data.userId] }, type: 1 })
+  let resData = []
+  if(dbres.length) {
+    for(const i in dbres) {
+      const user_dbres = await Db.find('user', { _id: ObjectId(dbres[i].sendUserId) })
+      if(!user_dbres) {
+        throw new Error('用户不存在')
+      }
+      dbres[i].userInfo = user_dbres[0]
+    }
+  }
+  resData = dbres
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: resData
+  }
+})
+
 router.post('/entry/room', async (ctx, next) => {
-  // 获取私聊历史
+  // 进入房间
   const data = ctx.request.body
   try {
     const dbres = await Db.find('room', { roomId: data.roomId })
     const token = ctx.request.header.authorization.split(' ')[1]
     const info = jwtGetInfo(token)
     const userId = info.id
+    const dbres_user = await Db.find('user', { _id: ObjectId(userId) })
     if (dbres[0].memberlist.indexOf(userId) < 0) {
+      // 如果该房间成员列表没有此用户，则添加此用户到房间成员列表
       dbres[0].memberlist.push(userId)
       await Db.update('room', { roomId: data.roomId }, { memberlist: dbres[0].memberlist })
+    }
+    console.log(dbres[0]._id, dbres_user[0].roomlist)
+    if (dbres_user[0].roomlist.indexOf(dbres[0]._id) < 0) {
+      // 如果该用户的房间列表没有该房间，则给该用户身上添加该房间，以便下次进入
+      dbres_user[0].roomlist.push(dbres[0]._id)
+      console.log(dbres_user[0].roomlist)
+      await Db.update('user', { _id: ObjectId(userId) }, { roomlist: dbres_user[0].roomlist })
     }
     ctx.body = {
       code: 0,
@@ -284,7 +368,73 @@ router.post('/entry/room', async (ctx, next) => {
       data: null
     }
   }
-  
+})
+
+router.post('/update/avatar', async (ctx, next) => {
+  // 更新用户头像
+  const data = ctx.request.body
+  const token = ctx.request.header.authorization.split(' ')[1]
+  const info = jwtGetInfo(token)
+  const userId = info.id
+  try {
+    const user_dbres = await Db.update('user', { _id: ObjectId(userId) }, { avatar : data.avatar })
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: null
+    }
+  } catch (e) {
+    console.log(e)
+    ctx.body = {
+      code: 1,
+      message: '出现错误，请联系管理员',
+      data: null
+    }
+  }
+})
+
+router.post('/find/user', async (ctx, next) => {
+  // 搜索用户
+  const data = ctx.request.body
+  const reg = new RegExp(`^.*${data.nickName}.*$`)
+  const dbres = await Db.find('user', { username: { $regex: reg, $options: 'i' } })
+  ctx.body = {
+    code: 0,
+    message: 'ok',
+    data: dbres
+  }
+})
+
+router.post('/friend/agree', async (ctx, next) => {
+  // 好友申请--同意
+  const data = ctx.request.body
+  try {
+    // 接收人push一个好友id
+    const dbres_receive = await Db.find('user', { _id: ObjectId(data.receiveId) })
+    const receivedUserFriends = dbres_receive[0].friends
+    receivedUserFriends.push(data.sendUserId)
+    console.log(receivedUserFriends)
+    await Db.update('user', { _id: ObjectId(data.receiveId) }, { friends: receivedUserFriends })
+    // 发起人push一个好友id
+    const dbres_send = await Db.find('user', { _id: ObjectId(data.sendUserId) })
+    const sendUserFriends = dbres_send[0].friends
+    sendUserFriends.push(data.receiveId)
+    console.log(sendUserFriends)
+    await Db.update('user', { _id: ObjectId(data.sendUserId) }, { friends: sendUserFriends })
+    await Db.remove('message', { _id: ObjectId(data._id) })
+    ctx.body = {
+      code: 0,
+      message: 'ok',
+      data: null
+    }
+  } catch (e) {
+    console.log(e)
+    ctx.body = {
+      code: 1,
+      message: '出现错误，请联系管理员',
+      data: null
+    }
+  }
 })
 
 module.exports = router

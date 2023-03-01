@@ -51,11 +51,11 @@
       }
     })
     socket.on('sendMsg', async (data) => {
-      setMessage(data)
+      await setMessage(data)
       // 向所有client发送data
+      console.log(data)
       const dbres = await Db.find('user', { _id: ObjectId(data.sendUserId) })
       data.userInfo = dbres[0]
-      console.log(data)
       io.emit('message', data)
     })
     socket.on('disconnect', () => {
@@ -89,6 +89,10 @@
         break;
       case 3:
         // ws断开
+        await Db.insert('message', data)
+        break;
+      case 4:
+        // 好友邀请
         await Db.insert('message', data)
         break;
     }
